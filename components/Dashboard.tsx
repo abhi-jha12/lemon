@@ -1,78 +1,100 @@
 'use client'
-import { useState } from 'react'
-import { Flame, Droplets, Moon, TrendingUp, Zap, Target, ChevronRight, Award } from 'lucide-react'
+import { Flame, Droplets, Moon, TrendingUp, Zap, Target, Award } from 'lucide-react'
 import { RadialBarChart, RadialBar, ResponsiveContainer } from 'recharts'
+import { useMeals } from '@/hooks/useData'
+import { useDailyLog } from '@/hooks/useData'
+import { useWeeklyWorkouts } from '@/hooks/useData'
+import { useWeight } from '@/hooks/useData'
 
-const weekData = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
-const workoutDays = [true, true, false, true, true, false, false]
-const today = new Date().getDay() === 0 ? 6 : new Date().getDay() - 1
+const CALORIE_GOAL = 2200
+const PROTEIN_GOAL = 120
+const CARBS_GOAL   = 220
+const FAT_GOAL     = 65
+
+const weekDays = ['M','T','W','T','F','S','S']
 
 export default function Dashboard() {
-  const [water, setWater] = useState(5)
-  const calorieGoal = 2200
-  const calorieConsumed = 1480
-  const calorieBurned = 320
-  const calorieNet = calorieConsumed - calorieBurned
-  const caloriePercent = Math.round((calorieNet / calorieGoal) * 100)
+  const { totals, loading: mealsLoading } = useMeals()
+  const { water, sleep, setWater, setSleep } = useDailyLog()
+  const { data: weekWorkouts } = useWeeklyWorkouts()
+  const { latest: latestWeight, change: weightChange } = useWeight(30)
 
-  const radialData = [{ value: caloriePercent, fill: '#eab308' }]
+  const caloriesNet   = totals.calories
+  const caloriesPct   = Math.min(Math.round((caloriesNet / CALORIE_GOAL) * 100), 100)
+  const radialData    = [{ value: caloriesPct, fill: '#eab308' }]
 
-  const stats = [
-    { label: 'Protein', value: '82g', goal: '120g', color: 'text-lemon-400', bar: 68 },
-    { label: 'Carbs', value: '165g', goal: '220g', color: 'text-forest-400', bar: 75 },
-    { label: 'Fat', value: '44g', goal: '65g', color: 'text-lemon-600', bar: 68 },
+  // Build workout day map for current week
+  const todayIdx = new Date().getDay() === 0 ? 6 : new Date().getDay() - 1
+  const workoutDates = new Set((weekWorkouts ?? []).filter(w => w.completed).map(w => w.date))
+  const weekStart = new Date()
+  weekStart.setDate(weekStart.getDate() - todayIdx)
+  const weekDayDates = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(weekStart)
+    d.setDate(weekStart.getDate() + i)
+    return d.toISOString().split('T')[0]
+  })
+
+  const macros = [
+    { label: 'Protein', value: totals.protein, goal: PROTEIN_GOAL, bar: Math.min(Math.round((totals.protein/PROTEIN_GOAL)*100),100), color:'text-lemon-400' },
+    { label: 'Carbs',   value: totals.carbs,   goal: CARBS_GOAL,   bar: Math.min(Math.round((totals.carbs/CARBS_GOAL)*100),100),   color:'text-forest-400' },
+    { label: 'Fat',     value: totals.fat,     goal: FAT_GOAL,     bar: Math.min(Math.round((totals.fat/FAT_GOAL)*100),100),       color:'text-lemon-600' },
   ]
 
   return (
     <div className="space-y-4 animate-slide-up">
-      {/* Streak Banner */}
+      {/* Streak / weight banner */}
       <div className="card p-4 lemon-glow flex items-center gap-3">
         <div className="w-12 h-12 rounded-xl bg-lemon-500/20 flex items-center justify-center flex-shrink-0">
           <Award size={24} className="text-lemon-400" />
         </div>
         <div className="flex-1">
-          <p className="text-xs text-lemon-100/50 mb-0.5">Current Streak</p>
-          <p className="font-display text-xl font-bold text-lemon-300">4 Days <span className="text-base">🔥</span></p>
+          <p className="text-xs text-lemon-100/50 mb-0.5">Current Weight</p>
+          <p className="font-display text-xl font-bold text-lemon-300">
+            {latestWeight ? `${latestWeight.weight_kg} kg` : '—'}
+          </p>
         </div>
         <div className="text-right">
-          <p className="text-xs text-lemon-100/50">Best</p>
-          <p className="text-sm font-semibold text-lemon-100">12 days</p>
+          <p className="text-xs text-lemon-100/50">30-day change</p>
+          <p className={`text-sm font-semibold ${weightChange < 0 ? 'text-forest-400' : weightChange > 0 ? 'text-red-400' : 'text-lemon-400'}`}>
+            {weightChange > 0 ? '+' : ''}{weightChange} kg
+          </p>
         </div>
       </div>
 
-      {/* Calorie Ring + Quick Stats */}
+      {/* Calorie ring + water/sleep */}
       <div className="grid grid-cols-5 gap-3">
         <div className="col-span-3 card p-4">
           <p className="text-xs text-lemon-100/50 mb-2 font-medium">Today's Calories</p>
           <div className="relative h-32">
             <ResponsiveContainer width="100%" height="100%">
-              <RadialBarChart
-                cx="50%" cy="50%"
-                innerRadius="65%" outerRadius="90%"
-                barSize={8}
-                data={[{ value: 100, fill: 'rgba(234,179,8,0.1)' }, ...radialData]}
-                startAngle={90} endAngle={-270}
-              >
+              <RadialBarChart cx="50%" cy="50%" innerRadius="65%" outerRadius="90%"
+                barSize={8} data={[{ value: 100, fill: 'rgba(234,179,8,0.1)' }, ...radialData]}
+                startAngle={90} endAngle={-270}>
                 <RadialBar dataKey="value" cornerRadius={8} />
               </RadialBarChart>
             </ResponsiveContainer>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="font-display text-xl font-bold text-lemon-300">{calorieNet}</span>
-              <span className="text-xs text-lemon-100/40">of {calorieGoal}</span>
+              {mealsLoading
+                ? <span className="text-xs text-lemon-100/40">Loading…</span>
+                : <>
+                    <span className="font-display text-xl font-bold text-lemon-300">{caloriesNet}</span>
+                    <span className="text-xs text-lemon-100/40">of {CALORIE_GOAL}</span>
+                  </>
+              }
             </div>
           </div>
           <div className="flex justify-between mt-2">
             <div className="text-center">
               <p className="text-xs text-lemon-100/40">Eaten</p>
-              <p className="text-sm font-semibold text-lemon-200">{calorieConsumed}</p>
+              <p className="text-sm font-semibold text-lemon-200">{totals.calories}</p>
             </div>
             <div className="text-center">
-              <p className="text-xs text-lemon-100/40">Burned</p>
-              <p className="text-sm font-semibold text-forest-400">{calorieBurned}</p>
+              <p className="text-xs text-lemon-100/40">Goal</p>
+              <p className="text-sm font-semibold text-forest-400">{CALORIE_GOAL}</p>
             </div>
             <div className="text-center">
               <p className="text-xs text-lemon-100/40">Left</p>
-              <p className="text-sm font-semibold text-lemon-400">{calorieGoal - calorieNet}</p>
+              <p className="text-sm font-semibold text-lemon-400">{Math.max(CALORIE_GOAL - caloriesNet, 0)}</p>
             </div>
           </div>
         </div>
@@ -84,42 +106,51 @@ export default function Dashboard() {
               <Droplets size={14} className="text-blue-400" />
               <span className="text-xs text-lemon-100/50">Water</span>
             </div>
-            <p className="font-display text-lg font-bold text-blue-300">{water}<span className="text-sm text-lemon-100/40">/8</span></p>
+            <p className="font-display text-lg font-bold text-blue-300">
+              {water}<span className="text-sm text-lemon-100/40">/8</span>
+            </p>
             <div className="flex gap-1 mt-2 flex-wrap">
               {Array.from({ length: 8 }).map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => setWater(i + 1)}
-                  className={`w-4 h-4 rounded-full transition-all ${i < water ? 'bg-blue-400' : 'bg-blue-900/40'}`}
-                />
+                <button key={i} onClick={() => setWater(i + 1)}
+                  className={`w-4 h-4 rounded-full transition-all ${i < water ? 'bg-blue-400' : 'bg-blue-900/40'}`} />
               ))}
             </div>
           </div>
-
           {/* Sleep */}
           <div className="card p-3 flex-1">
             <div className="flex items-center gap-1.5 mb-2">
               <Moon size={14} className="text-purple-400" />
               <span className="text-xs text-lemon-100/50">Sleep</span>
             </div>
-            <p className="font-display text-lg font-bold text-purple-300">7.2<span className="text-sm text-lemon-100/40">h</span></p>
-            <p className="text-xs text-lemon-100/30 mt-1">Goal: 8h</p>
+            <p className="font-display text-lg font-bold text-purple-300">
+              {sleep > 0 ? `${sleep}` : '—'}<span className="text-sm text-lemon-100/40">h</span>
+            </p>
+            <div className="flex gap-1 mt-1.5 flex-wrap">
+              {[6,7,8,9].map(h => (
+                <button key={h} onClick={() => setSleep(h)}
+                  className={`px-1.5 py-0.5 rounded text-xs transition-all ${sleep === h ? 'bg-purple-500/30 text-purple-300' : 'text-lemon-100/30 hover:text-lemon-100/60'}`}>
+                  {h}h
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Macro Breakdown */}
+      {/* Macros */}
       <div className="card p-4">
         <div className="flex items-center justify-between mb-3">
           <p className="text-sm font-semibold text-lemon-200">Macros Today</p>
           <span className="text-xs text-lemon-100/40">% of goal</span>
         </div>
         <div className="space-y-3">
-          {stats.map((s) => (
+          {macros.map(s => (
             <div key={s.label}>
               <div className="flex justify-between mb-1.5">
                 <span className="text-xs text-lemon-100/60">{s.label}</span>
-                <span className={`text-xs font-medium ${s.color}`}>{s.value} <span className="text-lemon-100/30">/ {s.goal}</span></span>
+                <span className={`text-xs font-medium ${s.color}`}>
+                  {s.value}g <span className="text-lemon-100/30">/ {s.goal}g</span>
+                </span>
               </div>
               <div className="progress-bar h-1.5">
                 <div className="progress-fill" style={{ width: `${s.bar}%` }} />
@@ -135,52 +166,46 @@ export default function Dashboard() {
           <p className="text-sm font-semibold text-lemon-200">Weekly Activity</p>
           <div className="flex items-center gap-1 text-xs text-forest-400">
             <TrendingUp size={12} />
-            <span>4/7 days</span>
+            <span>{workoutDates.size}/7 days</span>
           </div>
         </div>
         <div className="flex justify-between">
-          {weekData.map((day, i) => (
-            <div key={i} className="flex flex-col items-center gap-2">
-              <div
-                className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${
-                  i === today
-                    ? 'bg-lemon-500/30 border border-lemon-400/50 lemon-glow'
-                    : workoutDays[i]
-                    ? 'bg-forest-800/60 border border-forest-600/40'
-                    : 'bg-bark-600/40 border border-bark-500/20'
-                }`}
-              >
-                {workoutDays[i] ? (
-                  <Zap size={14} className={i === today ? 'text-lemon-300' : 'text-forest-400'} />
-                ) : (
-                  <span className="w-1.5 h-1.5 rounded-full bg-bark-500" />
-                )}
+          {weekDays.map((day, i) => {
+            const isToday   = i === todayIdx
+            const hasWorkout = workoutDates.has(weekDayDates[i])
+            return (
+              <div key={i} className="flex flex-col items-center gap-2">
+                <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all ${
+                  isToday ? 'bg-lemon-500/30 border border-lemon-400/50 lemon-glow'
+                  : hasWorkout ? 'bg-forest-800/60 border border-forest-600/40'
+                  : 'bg-bark-600/40 border border-bark-500/20'}`}>
+                  {hasWorkout
+                    ? <Zap size={14} className={isToday ? 'text-lemon-300' : 'text-forest-400'} />
+                    : <span className="w-1.5 h-1.5 rounded-full bg-bark-500" />}
+                </div>
+                <span className={`text-xs ${isToday ? 'text-lemon-400 font-semibold' : 'text-lemon-100/30'}`}>{day}</span>
               </div>
-              <span className={`text-xs ${i === today ? 'text-lemon-400 font-semibold' : 'text-lemon-100/30'}`}>{day}</span>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </div>
 
-      {/* Today's Goals */}
+      {/* Goals */}
       <div className="card p-4">
         <p className="text-sm font-semibold text-lemon-200 mb-3">Today's Goals</p>
         <div className="space-y-2">
           {[
-            { label: 'Hit 10,000 steps', done: true },
             { label: 'Drink 8 glasses of water', done: water >= 8 },
-            { label: 'Complete workout', done: false },
-            { label: 'Log all meals', done: false },
+            { label: 'Log all meals', done: totals.calories > 0 },
+            { label: 'Complete a workout', done: (weekWorkouts ?? []).some(w => w.date === new Date().toISOString().split('T')[0] && w.completed) },
+            { label: 'Stay under calorie goal', done: caloriesNet > 0 && caloriesNet <= CALORIE_GOAL },
           ].map((goal, i) => (
             <div key={i} className="flex items-center gap-3">
-              <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 transition-all ${
-                goal.done ? 'bg-forest-500/30 border border-forest-400/60' : 'border border-lemon-100/20'
-              }`}>
+              <div className={`w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ${
+                goal.done ? 'bg-forest-500/30 border border-forest-400/60' : 'border border-lemon-100/20'}`}>
                 {goal.done && <span className="text-forest-400 text-xs">✓</span>}
               </div>
-              <span className={`text-sm ${goal.done ? 'text-lemon-100/40 line-through' : 'text-lemon-100/70'}`}>
-                {goal.label}
-              </span>
+              <span className={`text-sm ${goal.done ? 'text-lemon-100/40 line-through' : 'text-lemon-100/70'}`}>{goal.label}</span>
             </div>
           ))}
         </div>
