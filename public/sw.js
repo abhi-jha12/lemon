@@ -1,6 +1,5 @@
-// Lemon PWA Service Worker v1.0
-const CACHE_NAME = 'lemon-v1';
-const OFFLINE_URL = '/offline';
+// Lemon PWA Service Worker v2.0 — with push notifications
+const CACHE_NAME = 'lemon-v2';
 
 const PRECACHE_ASSETS = [
   '/',
@@ -33,18 +32,13 @@ self.addEventListener('activate', (event) => {
 });
 
 // ─── Fetch Strategy ────────────────────────────────────────────────────────
-// Network first for API/navigation, cache first for static assets
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // Skip non-GET requests
   if (request.method !== 'GET') return;
-
-  // Skip cross-origin requests (fonts, analytics etc.)
   if (url.origin !== self.location.origin) return;
 
-  // ── Static assets: cache first ──
   if (
     request.destination === 'image' ||
     request.destination === 'font' ||
@@ -65,7 +59,6 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // ── Pages: network first, fall back to cache ──
   event.respondWith(
     fetch(request)
       .then((response) => {
@@ -78,7 +71,6 @@ self.addEventListener('fetch', (event) => {
       .catch(() => {
         return caches.match(request).then((cached) => {
           if (cached) return cached;
-          // Return cached home page as fallback for any navigation
           if (request.destination === 'document') {
             return caches.match('/');
           }
@@ -88,7 +80,7 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// ─── Background Sync (meal/workout logs) ───────────────────────────────────
+// ─── Background Sync ───────────────────────────────────────────────────────
 self.addEventListener('sync', (event) => {
   if (event.tag === 'sync-logs') {
     event.waitUntil(syncPendingLogs());
@@ -96,37 +88,102 @@ self.addEventListener('sync', (event) => {
 });
 
 async function syncPendingLogs() {
-  // Placeholder: sync any queued offline logs when back online
   console.log('[Lemon SW] Syncing pending logs...');
 }
 
 // ─── Push Notifications ────────────────────────────────────────────────────
 self.addEventListener('push', (event) => {
-  const data = event.data?.json() ?? {};
+  if (!event.data) return;
+
+  let data = {};
+  try { data = event.data.json(); } catch { data = { body: event.data.text() }; }
+
   const title = data.title || '🍋 Lemon';
+  const type  = data.type  || 'general';
+  const url   = data.url   || getDefaultUrl(type);
+
+  // Collapse notifications of the same type so they don't stack up
+  const tag = data.tag || type;
+
   const options = {
-    body: data.body || 'Time to log your meal!',
-    icon: '/icon-192.png',
-    badge: '/favicon-32.png',
+    body:    data.body    || 'Time to log your progress!',
+    icon:    data.icon    || '/icon-192.png',
+    badge:   data.badge   || '/favicon-32.png',
+    tag,
+    // Renotify=true means a new push with the same tag still vibrates
+    renotify: true,
     vibrate: [100, 50, 100],
-    data: { url: data.url || '/' },
-    actions: [
-      { action: 'open', title: 'Open App' },
-      { action: 'dismiss', title: 'Dismiss' },
-    ],
+    timestamp: Date.now(),
+    data: { url, type },
+    actions: getActions(type),
   };
+
   event.waitUntil(self.registration.showNotification(title, options));
 });
 
+function getDefaultUrl(type) {
+  switch (type) {
+    case 'reminder_meal':    return '/?tab=meals';
+    case 'reminder_workout': return '/?tab=workout';
+    case 'reminder_water':   return '/?tab=dashboard';
+    case 'motivation':       return '/';
+    default:                 return '/';
+  }
+}
+
+function getActions(type) {
+  switch (type) {
+    case 'reminder_meal':
+      return [
+        { action: 'log',     title: 'Log meal' },
+        { action: 'dismiss', title: 'Later'    },
+      ];
+    case 'reminder_workout':
+      return [
+        { action: 'log',     title: 'Start workout' },
+        { action: 'dismiss', title: 'Skip'          },
+      ];
+    case 'reminder_water':
+      return [
+        { action: 'log',     title: 'Log water' },
+        { action: 'dismiss', title: 'Dismiss'   },
+      ];
+    default:
+      return [
+        { action: 'open',    title: 'Open Lemon' },
+        { action: 'dismiss', title: 'Dismiss'    },
+      ];
+  }
+}
+
+// ─── Notification click ────────────────────────────────────────────────────
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
+
   if (event.action === 'dismiss') return;
+
+  // For action buttons, always navigate to the relevant deep link
+  const targetUrl = event.notification.data?.url || '/';
+
   event.waitUntil(
-    clients.matchAll({ type: 'window' }).then((clientList) => {
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      // If the app is already open, navigate it and focus
       for (const client of clientList) {
-        if (client.url === '/' && 'focus' in client) return client.focus();
+        if ('navigate' in client) {
+          client.navigate(targetUrl);
+          return client.focus();
+        }
       }
-      if (clients.openWindow) return clients.openWindow('/');
+      // Otherwise open a new window
+      if (clients.openWindow) {
+        return clients.openWindow(targetUrl);
+      }
     })
   );
+});
+
+// ─── Notification close (analytics hook) ──────────────────────────────────
+self.addEventListener('notificationclose', (event) => {
+  // Could POST to /api/push/analytics here if desired
+  console.log('[Lemon SW] Notification dismissed:', event.notification.tag);
 });

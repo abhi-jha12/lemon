@@ -84,7 +84,7 @@ export default function MacroTracker() {
       <div className="grid grid-cols-3 gap-3">
         {[
           { label: 'Weight', value: latest ? `${latest.weight_kg}kg` : '—', icon: Scale, sub: 'Current', color: 'text-lemon-400' },
-          { label: 'Goal',   value: '68 kg', icon: Target,   sub: latest ? `${Math.abs(68 - latest.weight_kg).toFixed(1)} to go` : '—', color: 'text-forest-400' },
+          { label: 'Goal',   value: '75 kg', icon: Target,   sub: latest ? `${Math.abs(75 - latest.weight_kg).toFixed(1)} to go` : '—', color: 'text-forest-400' },
           { label: 'BMR',    value: '1,840', icon: Activity, sub: 'kcal/day', color: 'text-purple-400' },
         ].map(m => (
           <div key={m.label} className="card p-3 text-center">

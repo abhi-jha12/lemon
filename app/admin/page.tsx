@@ -2,10 +2,11 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
-import { Plus, Pencil, Trash2, Loader2, Check, X, ChevronDown, ChevronUp, LogOut, UtensilsCrossed, Dumbbell, ToggleLeft, ToggleRight } from 'lucide-react'
+import { Plus, Pencil, Trash2, Loader2, Check, X, ChevronDown, ChevronUp, LogOut, UtensilsCrossed, Dumbbell, ToggleLeft, ToggleRight, Bell } from 'lucide-react'
 import type { MealTemplate, WorkoutTemplate } from '@/types'
+import AdminNotifications from '@/components/AdminNotifications'
 
-type Tab = 'meals' | 'workouts'
+type Tab = 'meals' | 'workouts' | 'notifications'
 
 export default function AdminPage() {
   const { user, loading: authLoading, logout } = useAuth()
@@ -53,18 +54,22 @@ export default function AdminPage() {
       <main className="max-w-2xl mx-auto px-4 py-6 relative z-10">
         {/* Tabs */}
         <div className="flex gap-2 mb-6">
-          {(['meals', 'workouts'] as Tab[]).map(t => (
-            <button key={t} onClick={() => setTab(t)}
+          {([
+            { key: 'meals'         as Tab, label: 'Meal Templates',    icon: <UtensilsCrossed size={15} /> },
+            { key: 'workouts'      as Tab, label: 'Workout Templates', icon: <Dumbbell size={15} /> },
+            { key: 'notifications' as Tab, label: 'Notifications',     icon: <Bell size={15} /> },
+          ]).map(({ key, label, icon }) => (
+            <button key={key} onClick={() => setTab(key)}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all border ${
-                tab === t ? 'tab-active' : 'border-lemon-500/15 text-lemon-100/40 hover:text-lemon-100/70'}`}>
-              {t === 'meals' ? <UtensilsCrossed size={15} /> : <Dumbbell size={15} />}
-              {t === 'meals' ? 'Meal Templates' : 'Workout Templates'}
+                tab === key ? 'tab-active' : 'border-lemon-500/15 text-lemon-100/40 hover:text-lemon-100/70'}`}>
+              {icon}{label}
             </button>
           ))}
         </div>
 
-        {tab === 'meals'    && <MealTemplatesAdmin />}
-        {tab === 'workouts' && <WorkoutTemplatesAdmin />}
+        {tab === 'meals'         && <MealTemplatesAdmin />}
+        {tab === 'workouts'      && <WorkoutTemplatesAdmin />}
+        {tab === 'notifications' && <AdminNotifications />}
       </main>
     </div>
   )
