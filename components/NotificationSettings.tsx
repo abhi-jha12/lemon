@@ -1,17 +1,48 @@
 'use client'
-/**
- * components/NotificationSettings.tsx
- *
- * A card that lets users enable/disable push notifications for this device.
- * Drop it anywhere — Dashboard, Header dropdown, Settings page, etc.
- */
-import { Bell, BellOff, BellRing, Loader2, X } from 'lucide-react'
+import { Bell, BellOff, BellRing, Loader2, X, Smartphone } from 'lucide-react'
 import { usePushNotifications } from '@/hooks/usePushNotifications'
 
 export default function NotificationSettings() {
-  const { permission, subscribed, loading, error, subscribe, unsubscribe } =
+  const { permission, subscribed, loading, error, iosState, subscribe, unsubscribe } =
     usePushNotifications()
 
+  // iOS: not yet installed as PWA — show install instructions instead
+  if (iosState === 'needs_install') {
+    return (
+      <div className="rounded-2xl border border-lemon-500/15 overflow-hidden"
+           style={{ background: 'rgba(255,255,255,0.03)' }}>
+        <div className="px-4 py-3 flex items-start gap-3">
+          <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-lemon-500/10 flex-shrink-0 mt-0.5">
+            <Smartphone size={17} className="text-lemon-400" />
+          </div>
+          <div>
+            <p className="text-sm font-medium text-lemon-200">Enable push notifications</p>
+            <p className="text-xs text-lemon-100/40 mt-0.5 leading-relaxed">
+              To get reminders on iPhone, first install Lemon to your Home Screen:
+            </p>
+            <ol className="mt-2 space-y-1">
+              {[
+                'Tap the Share button in Safari (the box with an arrow)',
+                'Scroll down and tap "Add to Home Screen"',
+                'Open the app from your Home Screen',
+                'Come back here to enable notifications',
+              ].map((step, i) => (
+                <li key={i} className="flex items-start gap-2 text-xs text-lemon-100/50">
+                  <span className="flex-shrink-0 w-4 h-4 rounded-full bg-lemon-500/15 text-lemon-400
+                                   flex items-center justify-center text-xs font-medium mt-0.5">
+                    {i + 1}
+                  </span>
+                  {step}
+                </li>
+              ))}
+            </ol>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // iOS too old or fully unsupported browser
   if (permission === 'unsupported') return null
 
   return (
@@ -64,7 +95,6 @@ export default function NotificationSettings() {
         )}
       </div>
 
-      {/* What you'll get */}
       {!subscribed && permission !== 'denied' && (
         <div className="px-4 pb-3 grid grid-cols-3 gap-2">
           {[

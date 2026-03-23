@@ -1,12 +1,4 @@
 'use client'
-/**
- * hooks/usePushNotifications.ts
- *
- * Manages the full push notification subscription lifecycle:
- * - Checks browser support & permission state
- * - Subscribes / unsubscribes via /api/push/subscribe
- * - Persists subscription in localStorage so we know if this device is subscribed
- */
 import { useState, useEffect, useCallback } from 'react'
 
 const LS_KEY = 'lemon_push_endpoint'
@@ -19,24 +11,77 @@ function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
   return arr.buffer as ArrayBuffer
 }
 
+// ── iOS detection helpers ───────────────────────────────────────────────────
+
+function isIos(): boolean {
+  if (typeof navigator === 'undefined') return false
+  return /iphone|ipad|ipod/i.test(navigator.userAgent)
+}
+
+// Returns true only when running as an installed PWA (standalone / fullscreen).
+// On iOS, push notifications are ONLY available in this mode.
+function isInstalledPwa(): boolean {
+  if (typeof window === 'undefined') return false
+  return (
+    window.matchMedia('(display-mode: standalone)').matches ||
+    ('standalone' in window.navigator && (window.navigator as { standalone?: boolean }).standalone === true)
+  )
+}
+
+// iOS 16.4+ added web push support. Anything older = truly unsupported.
+function isIosPushSupported(): boolean {
+  const match = navigator.userAgent.match(/OS (\d+)_(\d+)/)
+  if (!match) return false
+  const major = parseInt(match[1], 10)
+  const minor = parseInt(match[2], 10)
+  return major > 16 || (major === 16 && minor >= 4)
+}
+
 export type PushPermission = 'default' | 'granted' | 'denied' | 'unsupported'
 
-export function usePushNotifications() {
-  const [permission, setPermission]     = useState<PushPermission>('default')
-  const [subscribed, setSubscribed]     = useState(false)
-  const [loading, setLoading]           = useState(false)
-  const [error, setError]               = useState<string | null>(null)
+// Extra iOS-specific state so the UI can show the right prompt
+export type IosState =
+  | 'ok'               // installed PWA on iOS 16.4+ — fully supported
+  | 'needs_install'    // on iOS but not installed as PWA yet
+  | 'ios_too_old'      // iOS < 16.4
+  | 'not_ios'          // non-iOS device
 
-  // Detect support and current state on mount
+export function usePushNotifications() {
+  const [permission, setPermission] = useState<PushPermission>('default')
+  const [subscribed, setSubscribed] = useState(false)
+  const [loading, setLoading]       = useState(false)
+  const [error, setError]           = useState<string | null>(null)
+  const [iosState, setIosState]     = useState<IosState>('not_ios')
+
   useEffect(() => {
     if (typeof window === 'undefined') return
+
+    // ── iOS checks first ───────────────────────────────────────────────────
+    if (isIos()) {
+      if (!isIosPushSupported()) {
+        setIosState('ios_too_old')
+        setPermission('unsupported')
+        return
+      }
+      if (!isInstalledPwa()) {
+        // Capable device but not installed — show install prompt instead
+        setIosState('needs_install')
+        setPermission('unsupported')   // treat as unsupported until installed
+        return
+      }
+      setIosState('ok')
+    } else {
+      setIosState('not_ios')
+    }
+
+    // ── Standard support check ─────────────────────────────────────────────
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
       setPermission('unsupported')
       return
     }
+
     setPermission(Notification.permission as PushPermission)
 
-    // Check if we already have an active subscription on this device
     const savedEndpoint = localStorage.getItem(LS_KEY)
     if (savedEndpoint) {
       navigator.serviceWorker.ready.then(reg =>
@@ -51,9 +96,19 @@ export function usePushNotifications() {
     setLoading(true)
     setError(null)
     try {
+      // Guard: on iOS, must be installed PWA
+      if (isIos() && !isInstalledPwa()) {
+        setError('Please add Lemon to your Home Screen first, then enable notifications.')
+        return
+      }
+
+      if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+        setError('Push notifications are not supported in this browser.')
+        return
+      }
+
       const reg = await navigator.serviceWorker.ready
 
-      // Request permission if not yet granted
       if (Notification.permission !== 'granted') {
         const result = await Notification.requestPermission()
         setPermission(result as PushPermission)
@@ -114,5 +169,5 @@ export function usePushNotifications() {
     }
   }, [])
 
-  return { permission, subscribed, loading, error, subscribe, unsubscribe }
+  return { permission, subscribed, loading, error, iosState, subscribe, unsubscribe }
 }
