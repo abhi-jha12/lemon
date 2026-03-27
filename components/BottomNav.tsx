@@ -1,12 +1,14 @@
 'use client'
 import { Tab } from '@/app/page'
-import { LayoutDashboard, UtensilsCrossed, Dumbbell, BarChart3 } from 'lucide-react'
+import { LayoutDashboard, UtensilsCrossed, Dumbbell, BarChart3, Cigarette, Settings } from 'lucide-react'
 
 const tabs: { id: Tab; icon: React.ElementType; label: string }[] = [
-  { id: 'dashboard', icon: LayoutDashboard, label: 'Home' },
-  { id: 'meals', icon: UtensilsCrossed, label: 'Meals' },
-  { id: 'workout', icon: Dumbbell, label: 'Workout' },
-  { id: 'macros', icon: BarChart3, label: 'Macros' },
+  { id: 'dashboard', icon: LayoutDashboard, label: 'Home'     },
+  { id: 'meals',     icon: UtensilsCrossed, label: 'Meals'    },
+  { id: 'workout',   icon: Dumbbell,        label: 'Workout'  },
+  { id: 'macros',    icon: BarChart3,       label: 'Macros'   },
+  { id: 'smoking',   icon: Cigarette,       label: 'Smoke'    },
+  { id: 'settings',  icon: Settings,        label: 'Settings' },
 ]
 
 export default function BottomNav({
@@ -18,9 +20,9 @@ export default function BottomNav({
 }) {
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 pb-safe">
-      <div className="max-w-md mx-auto px-4 pb-4">
+      <div className="max-w-md mx-auto px-2 pb-3">
         <div
-          className="flex items-center justify-around rounded-2xl p-2"
+          className="flex items-center justify-around rounded-2xl p-1.5"
           style={{
             background: 'rgba(26, 26, 14, 0.95)',
             border: '1px solid rgba(234, 179, 8, 0.15)',
@@ -34,18 +36,21 @@ export default function BottomNav({
               <button
                 key={id}
                 onClick={() => setActiveTab(id)}
-                className={`flex flex-col items-center gap-1 px-4 py-2 rounded-xl transition-all duration-300 ${
+                className={`flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl transition-all duration-300 ${
                   isActive
                     ? 'tab-active'
                     : 'text-lemon-100/40 hover:text-lemon-100/70 border border-transparent'
                 }`}
               >
                 <Icon
-                  size={20}
+                  size={18}
                   className={`transition-all duration-300 ${isActive ? 'text-lemon-300' : ''}`}
                   strokeWidth={isActive ? 2 : 1.5}
                 />
-                <span className={`text-xs font-medium transition-all duration-300 ${isActive ? 'text-lemon-300' : ''}`}>
+                <span
+                  className={`font-medium transition-all duration-300 ${isActive ? 'text-lemon-300' : ''}`}
+                  style={{ fontSize: '10px' }}
+                >
                   {label}
                 </span>
               </button>

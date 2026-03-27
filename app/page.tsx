@@ -6,11 +6,13 @@ import Dashboard from '@/components/Dashboard'
 import MealPlanner from '@/components/MealPlanner'
 import WorkoutPlanner from '@/components/WorkoutPlanner'
 import MacroTracker from '@/components/MacroTracker'
+import SmokingTracker from '@/components/SmokingTracker'
+import Settings from '@/components/Settings'
 import BottomNav from '@/components/BottomNav'
 import Header from '@/components/Header'
 import { Loader2 } from 'lucide-react'
 
-export type Tab = 'dashboard' | 'meals' | 'workout' | 'macros'
+export type Tab = 'dashboard' | 'meals' | 'workout' | 'macros' | 'smoking' | 'settings'
 
 export default function Home() {
   const { user, loading } = useAuth()
@@ -28,7 +30,7 @@ export default function Home() {
           <span className="text-5xl animate-float inline-block">🍋</span>
           <div className="flex items-center gap-2 justify-center">
             <Loader2 size={16} className="text-lemon-400 animate-spin" />
-            <span className="text-sm text-lemon-100/40">Loading Lemon…</span>
+            <span className="text-sm text-lemon-100/40">Loading Lemon...</span>
           </div>
         </div>
       </div>
@@ -48,6 +50,8 @@ export default function Home() {
         {activeTab === 'meals'     && <MealPlanner />}
         {activeTab === 'workout'   && <WorkoutPlanner />}
         {activeTab === 'macros'    && <MacroTracker />}
+        {activeTab === 'smoking'   && <SmokingTracker />}
+        {activeTab === 'settings'  && <Settings />}
       </main>
 
       <BottomNav activeTab={activeTab} setActiveTab={setActiveTab} />

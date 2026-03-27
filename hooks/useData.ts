@@ -1,7 +1,12 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
 import * as db from '@/lib/db'
-import type { MealLog, WorkoutLog, WeightLog, DailyLog, MacroSummary, MealTemplate, WorkoutTemplate } from '@/types'
+import type {
+  MealLog, WorkoutLog, WeightLog, DailyLog, MacroSummary,
+  MealTemplate, WorkoutTemplate,
+  UserSettings, SmokingSettings, SmokingLog,
+  ExerciseSet, BodyMeasurement,
+} from '@/types'
 
 function today() { return new Date().toISOString().split('T')[0] }
 
@@ -20,6 +25,22 @@ function useAsync<T>(fetcher: () => Promise<T>, initial: T, deps: unknown[] = []
 
   useEffect(() => { load() }, [load])
   return { data, loading, error, refetch: load, setData }
+}
+
+// ─── USER SETTINGS ─────────────────────────────────────────────────────────
+
+export function useUserSettings() {
+  const { data, loading, error, refetch, setData } = useAsync<UserSettings | null>(
+    () => db.getUserSettings(), null
+  )
+
+  const save = useCallback(async (updates: Partial<Omit<UserSettings, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => {
+    const saved = await db.upsertUserSettings(updates)
+    setData(saved)
+    return saved
+  }, [setData])
+
+  return { settings: data, loading, error, refetch, save }
 }
 
 // ─── TEMPLATES ─────────────────────────────────────────────────────────────
@@ -101,6 +122,18 @@ export function useWeeklyWorkouts() {
   return useAsync<WorkoutLog[]>(() => db.getWorkoutsForWeek(), [])
 }
 
+// ─── EXERCISE SETS (progressive overload) ──────────────────────────────────
+
+export function useExerciseHistory(exerciseName: string, days = 90) {
+  return useAsync<ExerciseSet[]>(
+    () => db.getExerciseHistory(exerciseName, days), [], [exerciseName, days]
+  )
+}
+
+export function useExerciseNames() {
+  return useAsync<string[]>(() => db.getExerciseNames(), [])
+}
+
 // ─── WEIGHT ────────────────────────────────────────────────────────────────
 
 export function useWeight(days = 60) {
@@ -155,4 +188,72 @@ export function useDailyLog(date = today()) {
 
 export function useWeeklyDailyLogs() {
   return useAsync<DailyLog[]>(() => db.getDailyLogsForWeek(), [])
+}
+
+// ─── SMOKING ───────────────────────────────────────────────────────────────
+
+export function useSmokingSettings() {
+  const { data, loading, error, refetch, setData } = useAsync<SmokingSettings | null>(
+    () => db.getSmokingSettings(), null
+  )
+
+  const save = useCallback(async (updates: Partial<Omit<SmokingSettings, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => {
+    const saved = await db.upsertSmokingSettings(updates)
+    setData(saved)
+    return saved
+  }, [setData])
+
+  return { settings: data, loading, error, refetch, save }
+}
+
+export function useSmokingToday() {
+  const { data: logs, loading, error, refetch, setData } = useAsync<SmokingLog[]>(
+    () => db.getSmokingLogsForDate(), []
+  )
+
+  const logSmoked = useCallback(async (note?: string) => {
+    const saved = await db.addSmokingLog({ type: 'smoked', note: note ?? null })
+    setData(prev => [...prev, saved])
+    return saved
+  }, [setData])
+
+  const logCravingResisted = useCallback(async (note?: string) => {
+    const saved = await db.addSmokingLog({ type: 'craving_resisted', note: note ?? null })
+    setData(prev => [...prev, saved])
+    return saved
+  }, [setData])
+
+  const deleteLog = useCallback(async (id: string) => {
+    setData(prev => prev.filter(l => l.id !== id))
+    try { await db.deleteSmokingLog(id) }
+    catch (e) { await refetch(); throw e }
+  }, [refetch, setData])
+
+  const smokedToday    = logs.filter(l => l.type === 'smoked').length
+  const resistedToday  = logs.filter(l => l.type === 'craving_resisted').length
+
+  return { logs, smokedToday, resistedToday, loading, error, refetch, logSmoked, logCravingResisted, deleteLog }
+}
+
+export function useSmokingHistory(days = 30) {
+  return useAsync<SmokingLog[]>(() => db.getSmokingLogsForDays(days), [], [days])
+}
+
+// ─── BODY MEASUREMENTS ─────────────────────────────────────────────────────
+
+export function useBodyMeasurements(days = 90) {
+  const { data: logs, loading, error, refetch, setData } = useAsync<BodyMeasurement[]>(
+    () => db.getBodyMeasurements(days), [], [days]
+  )
+
+  const save = useCallback(async (updates: Parameters<typeof db.upsertBodyMeasurement>[0]) => {
+    const saved = await db.upsertBodyMeasurement(updates)
+    setData(prev => {
+      const filtered = prev.filter(m => m.date !== saved.date)
+      return [...filtered, saved].sort((a, b) => a.date.localeCompare(b.date))
+    })
+    return saved
+  }, [setData])
+
+  return { logs, loading, error, refetch, save }
 }

@@ -10,6 +10,8 @@ const tabSubtitles: Record<Tab, string> = {
   meals:     'Eat well, feel great',
   workout:   'Move with intention',
   macros:    'Fuel your body right',
+  smoking:   'One day at a time',
+  settings:  'Your personal setup',
 }
 
 export default function Header({ activeTab }: { activeTab: Tab }) {
@@ -17,10 +19,12 @@ export default function Header({ activeTab }: { activeTab: Tab }) {
   const router = useRouter()
   const [menuOpen, setMenuOpen] = useState(false)
 
-  const now    = new Date()
-  const hour   = now.getHours()
+  const now      = new Date()
+  const hour     = now.getHours()
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
-  const title  = activeTab === 'dashboard' ? `${greeting}, ${user?.name?.split(' ')[0] ?? ''}` : tabSubtitles[activeTab]
+  const title    = activeTab === 'dashboard'
+    ? `${greeting}, ${user?.name?.split(' ')[0] ?? ''}`
+    : tabSubtitles[activeTab]
 
   const handleLogout = async () => {
     await logout()
@@ -30,7 +34,6 @@ export default function Header({ activeTab }: { activeTab: Tab }) {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 px-4 pt-safe">
       <div className="max-w-md mx-auto flex items-center justify-between py-4">
-        {/* Left: logo + subtitle */}
         <div className="animate-fade-in min-w-0">
           <div className="flex items-center gap-2 mb-0.5">
             <span className="text-xl">🍋</span>
@@ -41,7 +44,6 @@ export default function Header({ activeTab }: { activeTab: Tab }) {
           <p className="text-xs text-lemon-100/40">{tabSubtitles[activeTab]}</p>
         </div>
 
-        {/* Right: date + user menu */}
         <div className="relative flex-shrink-0">
           <button
             onClick={() => setMenuOpen(!menuOpen)}
@@ -52,24 +54,18 @@ export default function Header({ activeTab }: { activeTab: Tab }) {
                 {now.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
               </p>
               <div className="flex items-center gap-1 justify-end">
-                {user?.role === 'admin' && (
-                  <ShieldCheck size={10} className="text-lemon-400" />
-                )}
-                <span className="text-xs text-lemon-300 font-medium">
-                  {user?.name?.split(' ')[0]}
-                </span>
+                {user?.role === 'admin' && <ShieldCheck size={10} className="text-lemon-400" />}
+                <span className="text-xs text-lemon-300 font-medium">{user?.name?.split(' ')[0]}</span>
               </div>
             </div>
             <ChevronDown size={12} className={`text-lemon-100/30 transition-transform ${menuOpen ? 'rotate-180' : ''}`} />
           </button>
 
-          {/* Dropdown */}
           {menuOpen && (
             <div
               className="absolute right-0 top-full mt-2 w-48 rounded-xl overflow-hidden animate-fade-in"
               style={{ background: 'rgba(30,30,15,0.98)', border: '1px solid rgba(234,179,8,0.15)', backdropFilter: 'blur(16px)', boxShadow: '0 8px 32px rgba(0,0,0,0.5)' }}
             >
-              {/* User info */}
               <div className="px-4 py-3 border-b border-lemon-500/10">
                 <p className="text-xs font-semibold text-lemon-200 truncate">{user?.name}</p>
                 <p className="text-xs text-lemon-100/40 truncate">{user?.email}</p>
@@ -79,8 +75,6 @@ export default function Header({ activeTab }: { activeTab: Tab }) {
                   </span>
                 )}
               </div>
-
-              {/* Admin panel link */}
               {user?.role === 'admin' && (
                 <button
                   onClick={() => { setMenuOpen(false); router.push('/admin') }}
@@ -89,8 +83,6 @@ export default function Header({ activeTab }: { activeTab: Tab }) {
                   <ShieldCheck size={13} /> Admin Panel
                 </button>
               )}
-
-              {/* Logout */}
               <button
                 onClick={() => { setMenuOpen(false); handleLogout() }}
                 className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs text-lemon-100/50 hover:text-red-400 hover:bg-red-500/10 transition-colors"
@@ -101,8 +93,6 @@ export default function Header({ activeTab }: { activeTab: Tab }) {
           )}
         </div>
       </div>
-
-      {/* Separator */}
       <div className="max-w-md mx-auto h-px bg-gradient-to-r from-transparent via-lemon-500/20 to-transparent" />
     </header>
   )
