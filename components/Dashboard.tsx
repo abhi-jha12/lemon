@@ -20,7 +20,7 @@ export default function Dashboard() {
   const PROTEIN_GOAL = settings?.protein_goal ?? 120;
   const CARBS_GOAL   = settings?.carbs_goal   ?? 220;
   const FAT_GOAL     = settings?.fat_goal     ?? 65;
-  const WATER_GOAL   = settings?.water_goal   ?? 8;
+  const WATER_GOAL   = 8; // stored in daily_logs, not user_settings
 
   const caloriesNet  = totals.calories;
   const caloriesPct  = Math.min(Math.round((caloriesNet / CALORIE_GOAL) * 100), 100);

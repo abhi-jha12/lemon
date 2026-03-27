@@ -229,6 +229,7 @@ create table if not exists public.user_settings (
   fat_goal                 int  not null default 65,
   weight_goal_kg           numeric(5,2),
   weekly_workout_target    int  not null default 4,
+  goal_type                text not null default 'maintain' check (goal_type in ('cut','maintain','gain')),
   -- body profile (for BMR)
   age                      int,
   height_cm                numeric(5,1),
@@ -268,6 +269,7 @@ create table if not exists public.body_measurements (
   waist_cm   numeric(5,1),
   hips_cm    numeric(5,1),
   arms_cm    numeric(5,1),
+  thighs_cm  numeric(5,1),
   note       text,
   created_at timestamptz not null default now(),
   unique(user_id, date)

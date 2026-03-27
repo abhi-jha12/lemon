@@ -4,7 +4,7 @@ import {
   Cigarette, ShieldCheck, TrendingDown, DollarSign,
   Clock, Flame, Plus, X, Loader2, Settings, Check,
 } from 'lucide-react'
-import { useSmokingSettings, useSmokingToday, useSmokingHistory } from '@/hooks/useData'
+import { useUserSettings, useSmokingToday, useSmokingHistory } from '@/hooks/useData'
 import type { SmokingLog } from '@/types'
 
 const RECOVERY_MILESTONES = [
@@ -40,7 +40,15 @@ function formatStreak(quitDate: string | null, lastSmoked: SmokingLog | null): {
 }
 
 export default function SmokingTracker() {
-  const { settings, loading: sLoading, save: saveSettings } = useSmokingSettings()
+  const { settings: rawSettings, loading: sLoading, save: saveSettings } = useUserSettings()
+
+  // Remap user_settings smoking fields to the shape the component expects
+  const settings = rawSettings ? {
+    quit_date:                    rawSettings.smoking_quit_date ?? null,
+    cigarettes_per_day_baseline:  rawSettings.cigarettes_per_day_baseline ?? 10,
+    pack_price_inr:               rawSettings.pack_price_inr ?? 250,
+    cigarettes_per_pack:          rawSettings.cigarettes_per_pack ?? 20,
+  } : null
   const { logs, smokedToday, resistedToday, loading: lLoading, logSmoked, logCravingResisted, deleteLog } = useSmokingToday()
   const { data: history } = useSmokingHistory(30)
 
@@ -105,11 +113,10 @@ export default function SmokingTracker() {
     setSettingsSaving(true)
     try {
       await saveSettings({
-        quit_date: formQuit || null,
+        smoking_quit_date: formQuit || null,
         cigarettes_per_day_baseline: Math.max(1, parseInt(formBaseline) || 10),
         pack_price_inr: Math.max(1, parseFloat(formPrice) || 250),
         cigarettes_per_pack: Math.max(1, parseInt(formPerPack) || 20),
-        is_tracking: true,
       })
       showToast('Settings saved')
       setShowSettings(false)

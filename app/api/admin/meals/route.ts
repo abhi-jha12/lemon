@@ -59,8 +59,18 @@ export async function PATCH(req: NextRequest) {
   const { supabase, error } = await getAdminSupabase()
   if (!supabase) return NextResponse.json({ error }, { status: 401 })
 
-  const { id, ...updates } = await req.json()
+  const body = await req.json()
+  const { id } = body
   if (!id) return NextResponse.json({ error: 'id is required' }, { status: 400 })
+
+  // Whitelist updatable fields — prevent arbitrary column injection
+  const ALLOWED = ['name', 'emoji', 'calories', 'protein', 'carbs', 'fat', 'category', 'is_active'] as const
+  const updates: Record<string, unknown> = {}
+  for (const key of ALLOWED) {
+    if (key in body) updates[key] = body[key]
+  }
+  if (Object.keys(updates).length === 0)
+    return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 })
 
   const { data, error: dbError } = await supabase
     .from('meal_templates').update(updates).eq('id', id).select().single()

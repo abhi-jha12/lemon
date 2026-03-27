@@ -27,7 +27,7 @@ export default function MacroTracker() {
   const { logs: weightLogs, latest, change, loading: wLoading, addWeight, deleteWeight } = useWeight(60)
   const { data: weekMeals, loading: mealsLoading } = useWeeklyMeals()
   const { sleep, setSleep, setSteps, steps } = useDailyLog()
-  const { logs: bodyLogs, save: saveBody } = useBodyMeasurements(3)
+  const { logs: bodyLogs, save: saveBody } = useBodyMeasurements(90)
 
   const GOALS = {
     calories: settings?.calorie_goal ?? 2200,
@@ -338,6 +338,7 @@ export default function MacroTracker() {
                 { key: 'waist_cm', label: 'Waist (cm)' },
                 { key: 'hips_cm',  label: 'Hips (cm)' },
                 { key: 'arms_cm',  label: 'Arms (cm)' },
+                { key: 'thighs_cm', label: 'Thighs (cm)' },
               ].map(({ key, label }) => (
                 <input key={key} type="number" step="0.5"
                   placeholder={label}
@@ -359,12 +360,13 @@ export default function MacroTracker() {
 
         {latestBody ? (
           <div>
-            <div className="grid grid-cols-4 gap-2">
+            <div className="grid grid-cols-3 gap-2">
               {[
                 { label: 'Chest', value: latestBody.chest_cm },
                 { label: 'Waist', value: latestBody.waist_cm },
                 { label: 'Hips',  value: latestBody.hips_cm },
                 { label: 'Arms',  value: latestBody.arms_cm },
+                { label: 'Thighs', value: latestBody.thighs_cm },
               ].map(({ label, value }) => (
                 <div key={label} className="bg-bark-700/40 rounded-xl p-2.5 text-center">
                   <p className="text-xs text-lemon-100/40 mb-1">{label}</p>

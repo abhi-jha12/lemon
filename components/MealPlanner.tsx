@@ -10,10 +10,9 @@ import {
   Check,
   Loader2,
 } from "lucide-react";
-import { useMeals, useMealTemplates } from "@/hooks/useData";
+import { useMeals, useMealTemplates, useUserSettings } from "@/hooks/useData";
 import type { MealLog, MealTemplate } from "@/types";
 
-const CALORIE_GOAL = 2200;
 const SLOTS = ["Breakfast", "Lunch", "Snack", "Dinner"] as const;
 type Slot = (typeof SLOTS)[number];
 
@@ -52,6 +51,9 @@ const getDefaultSlot = (): Slot => {
 export default function MealPlanner() {
   const { meals, totals, loading, error, addMeal, deleteMeal } = useMeals();
   const { data: allTemplates, loading: tplLoading } = useMealTemplates();
+  const { settings } = useUserSettings();
+
+  const CALORIE_GOAL = settings?.calorie_goal ?? 2200;
 
   const [expanded, setExpanded] = useState<Slot | null>(getDefaultSlot);
   const [showSuggest, setShowSuggest] = useState<Slot | null>(null);

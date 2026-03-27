@@ -13,7 +13,7 @@ import type {
   MealTemplate, WorkoutTemplate,
   MacroSummary,
   UserSettings,
-  SmokingSettings, SmokingLog, SmokingLogInsert,
+  SmokingLog, SmokingLogInsert,
   BodyMeasurement, BodyMeasurementInsert,
 } from '@/types'
 
@@ -34,10 +34,11 @@ export async function getCurrentUserId(): Promise<string> {
   try {
     const res = await fetch('/api/auth/me')
     const { user } = await res.json()
-    _cachedUserId = user?.id ?? null
+    if (!user?.id) throw new Error('Not authenticated')
+    _cachedUserId = user.id
     return _cachedUserId!
   } catch {
-    return 'anonymous'
+    throw new Error('Not authenticated')
   }
 }
 
@@ -76,7 +77,7 @@ export async function upsertUserSettings(
 
   const defaults = {
     calorie_goal: 2200, protein_goal: 120, carbs_goal: 220, fat_goal: 65,
-    water_goal: 8, weekly_workout_goal: 4,
+    weekly_workout_target: 4,
     weight_goal_kg: null, age: null, height_cm: null,
     sex: null, activity_level: null, goal_type: 'maintain' as const,
   }
@@ -342,49 +343,6 @@ export async function getDailyLogsForWeek(): Promise<DailyLog[]> {
 }
 
 // ─── SMOKING ───────────────────────────────────────────────────────────────
-
-export async function getSmokingSettings(): Promise<SmokingSettings | null> {
-  const userId = await getCurrentUserId()
-  const { data, error } = await supabase()
-    .from('smoking_settings')
-    .select('*')
-    .eq('user_id', userId)
-    .maybeSingle()
-  if (error) throw error
-  return data
-}
-
-export async function upsertSmokingSettings(
-  updates: Partial<Omit<SmokingSettings, 'id' | 'user_id' | 'created_at' | 'updated_at'>>
-): Promise<SmokingSettings> {
-  const userId = await getCurrentUserId()
-  const existing = await getSmokingSettings()
-
-  if (existing) {
-    const { data, error } = await supabase()
-      .from('smoking_settings')
-      .update({ ...updates, updated_at: new Date().toISOString() })
-      .eq('id', existing.id)
-      .select()
-      .single()
-    return err(data, error)
-  }
-
-  const { data, error } = await supabase()
-    .from('smoking_settings')
-    .insert({
-      user_id: userId,
-      quit_date: null,
-      cigarettes_per_day_baseline: 10,
-      pack_price_inr: 250,
-      cigarettes_per_pack: 20,
-      is_tracking: true,
-      ...updates,
-    })
-    .select()
-    .single()
-  return err(data, error)
-}
 
 export async function addSmokingLog(entry: Omit<SmokingLogInsert, 'user_id' | 'date' | 'logged_at'>): Promise<SmokingLog> {
   const userId = await getCurrentUserId()

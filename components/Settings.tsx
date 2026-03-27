@@ -31,14 +31,15 @@ export default function Settings() {
     finally { setSaving(false) }
   }
 
-  // Live BMR preview
+  // Live BMR preview — needs current weight, not goal weight
+  // We don't have weight logs in Settings, so we can only show BMR if weight_goal_kg
+  // is set as a proxy. A note is shown to the user to update with actual weight.
   const weight = settings?.weight_goal_kg ?? null
-  const { latest: latestWeight } = { latest: null } // just show static if no weight
   const bmr = (settings && weight)
-    ? calculateBMR(settings,Number(weight))
+    ? calculateBMR(settings, Number(weight))
     : null
-  const tdee = bmr && settings?.activity_level 
-    ? calculateTDEE(settings,Number(weight))
+  const tdee = bmr && settings?.activity_level
+    ? calculateTDEE(settings, Number(weight))
     : null
 
   const sections: { id: Section; label: string; icon: React.ElementType }[] = [
@@ -132,8 +133,8 @@ export default function Settings() {
                 <label className="text-xs text-lemon-100/60">Weekly workouts</label>
                 <input
                   type="number" min={0} max={14}
-                  value={form.weekly_workout_goal ?? 4}
-                  onChange={e => set('weekly_workout_goal', Number(e.target.value))}
+                  value={form.weekly_workout_target ?? 4}
+                  onChange={e => set('weekly_workout_target', Number(e.target.value))}
                   className="mt-1 w-full bg-bark-600/40 border border-lemon-500/15 rounded-xl px-3 py-2 text-sm text-lemon-100 focus:outline-none focus:border-lemon-500/40"
                 />
               </div>
@@ -223,7 +224,7 @@ export default function Settings() {
                   </div>
                 )}
               </div>
-              <p className="text-xs text-lemon-100/30 mt-1">Based on your weight goal. Update with your current weight for accuracy.</p>
+              <p className="text-xs text-lemon-100/30 mt-1">Based on your weight goal (proxy). Log your current weight in the Progress tab for accurate BMR.</p>
             </div>
           )}
         </div>

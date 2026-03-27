@@ -4,7 +4,7 @@ import * as db from '@/lib/db'
 import type {
   MealLog, WorkoutLog, WeightLog, DailyLog, MacroSummary,
   MealTemplate, WorkoutTemplate,
-  UserSettings, SmokingSettings, SmokingLog,
+  UserSettings, SmokingLog,
   ExerciseSet, BodyMeasurement,
 } from '@/types'
 
@@ -191,20 +191,6 @@ export function useWeeklyDailyLogs() {
 }
 
 // ─── SMOKING ───────────────────────────────────────────────────────────────
-
-export function useSmokingSettings() {
-  const { data, loading, error, refetch, setData } = useAsync<SmokingSettings | null>(
-    () => db.getSmokingSettings(), null
-  )
-
-  const save = useCallback(async (updates: Partial<Omit<SmokingSettings, 'id' | 'user_id' | 'created_at' | 'updated_at'>>) => {
-    const saved = await db.upsertSmokingSettings(updates)
-    setData(saved)
-    return saved
-  }, [setData])
-
-  return { settings: data, loading, error, refetch, save }
-}
 
 export function useSmokingToday() {
   const { data: logs, loading, error, refetch, setData } = useAsync<SmokingLog[]>(

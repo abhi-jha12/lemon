@@ -24,8 +24,7 @@ export interface UserSettings {
   protein_goal: number
   carbs_goal: number
   fat_goal: number
-  water_goal: number
-  weekly_workout_goal: number
+  weekly_workout_target: number
   weight_goal_kg: number | null
   age: number | null
   height_cm: number | null
@@ -41,18 +40,6 @@ export interface UserSettings {
 }
 
 // ─── Smoking ───────────────────────────────────────────────────────────────
-
-export interface SmokingSettings {
-  id: string
-  user_id: string
-  quit_date: string | null
-  cigarettes_per_day_baseline: number
-  pack_price_inr: number
-  cigarettes_per_pack: number
-  is_tracking: boolean
-  created_at: string
-  updated_at: string
-}
 
 export interface SmokingLog {
   id: string

@@ -62,13 +62,48 @@ export async function PATCH(req: NextRequest) {
   const { supabase, error } = await getAdminSupabase()
   if (!supabase) return NextResponse.json({ error }, { status: 401 })
 
-  const { id, exercises, ...updates } = await req.json()
+  const body = await req.json()
+  const { id, exercises } = body
   if (!id) return NextResponse.json({ error: 'id is required' }, { status: 400 })
 
-  const { data, error: dbError } = await supabase
-    .from('workout_templates').update(updates).eq('id', id).select().single()
-  if (dbError) return NextResponse.json({ error: dbError.message }, { status: 500 })
-  return NextResponse.json({ template: data })
+  // Whitelist updatable fields — prevent arbitrary column injection
+  const ALLOWED = ['name', 'tag', 'emoji', 'duration_minutes', 'calories_burned', 'is_active']
+  const updates: Record<string, unknown> = {}
+  for (const key of ALLOWED) {
+    if (key in body) updates[key] = body[key]
+  }
+
+  // Update workout template fields if any were provided
+  let templateData = null
+  if (Object.keys(updates).length > 0) {
+    const { data, error: dbError } = await supabase
+      .from('workout_templates').update(updates).eq('id', id).select().single()
+    if (dbError) return NextResponse.json({ error: dbError.message }, { status: 500 })
+    templateData = data
+  }
+
+  // Replace exercise list if provided
+  if (Array.isArray(exercises)) {
+    // Delete existing exercises for this template then re-insert
+    const { error: delErr } = await supabase
+      .from('workout_template_exercises')
+      .delete()
+      .eq('workout_template_id', id)
+    if (delErr) return NextResponse.json({ error: delErr.message }, { status: 500 })
+
+    if (exercises.length > 0) {
+      const rows = exercises.map((ex: Record<string, unknown>, i: number) => ({
+        ...ex,
+        workout_template_id: id,
+        sort_order: i + 1,
+      }))
+      const { error: insErr } = await supabase
+        .from('workout_template_exercises').insert(rows)
+      if (insErr) return NextResponse.json({ error: insErr.message }, { status: 500 })
+    }
+  }
+
+  return NextResponse.json({ template: templateData, ok: true })
 }
 
 export async function DELETE(req: NextRequest) {
